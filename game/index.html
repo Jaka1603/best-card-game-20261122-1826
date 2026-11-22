@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember Court — Duel of the Four Flames</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="viewport">
+<div id="stage">
+  <img id="table-bg" src="assets/table.jpg" alt="The Ember Court table">
+  <canvas id="embers" width="1280" height="720"></canvas>
+  <div id="vignette"></div>
+
+  <header id="topbar">
+    <div class="hero" id="ai-hero">
+      <div class="hero-portrait foe">V</div>
+      <div class="hero-info">
+        <div class="hero-name">Warden Veyla</div>
+        <div class="hero-life"><span class="hero-hearts"></span><span class="hero-life-num">30</span><span class="hero-life-max">/ 30</span></div>
+        <div class="hero-embers"></div>
+      </div>
+    </div>
+    <div id="turn-block">
+      <div id="turn-label">Ember Court</div>
+      <div id="score-line"></div>
+    </div>
+    <div id="top-right">
+      <div id="ai-hand-count"></div>
+      <button id="mute-btn" type="button">Sound: on (M)</button>
+    </div>
+  </header>
+
+  <div id="ai-hand" title="Veyla's hand"></div>
+  <section id="ai-board" class="board" aria-label="Veyla's creatures"></section>
+
+  <div id="midline">
+    <div id="log"></div>
+    <button id="end-turn" type="button">End Turn ⏎</button>
+  </div>
+
+  <section id="player-board" class="board" aria-label="Your creatures"></section>
+  <div id="player-hand"></div>
+
+  <footer id="bottombar">
+    <div class="hero" id="player-hero">
+      <div class="hero-portrait you">Y</div>
+      <div class="hero-info">
+        <div class="hero-name">You</div>
+        <div class="hero-life"><span class="hero-hearts"></span><span class="hero-life-num">30</span><span class="hero-life-max">/ 30</span></div>
+        <div class="hero-embers"></div>
+      </div>
+    </div>
+    <div id="hint"></div>
+    <div id="deck-note">Click a card to play it · click a creature, then a target, to attack</div>
+  </footer>
+
+  <div id="title-screen" class="overlay">
+    <div class="title-inner">
+      <div class="title-kicker">A DUEL OF THE FOUR FLAMES</div>
+      <h1>EMBER COURT</h1>
+      <p class="title-sub">Outwit Warden Veyla at the candlelit table. Spend ember, summon creatures of
+        Flame, Tide, Leaf and Stone — chain two of one element for <b>Resonance +1/+1</b> —
+        and bring her life to zero before she brings yours.</p>
+      <div class="legend">
+        <span class="legend-item el-flame"><i></i>Flame</span>
+        <span class="legend-item el-tide"><i></i>Tide</span>
+        <span class="legend-item el-leaf"><i></i>Leaf</span>
+        <span class="legend-item el-stone"><i></i>Stone</span>
+      </div>
+      <button id="play-btn" type="button">▶&nbsp; PLAY DUEL</button>
+      <p class="title-foot">Keys 1–8 play cards · Space ends your turn · M mutes · An original game — no network, no accounts.</p>
+    </div>
+  </div>
+
+  <div id="end-screen" class="overlay">
+    <div class="end-inner">
+      <h2 id="end-title" class="end-title win">VICTORY</h2>
+      <p id="end-sub"></p>
+      <div id="end-stats"></div>
+      <button id="again-btn" type="button">Play again (R)</button>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+  // Fit the fixed 1280x720 table to the window; the game logic never sees this.
+  (function fitStage() {
+    var viewport = document.getElementById('viewport');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+      viewport.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    fit();
+  })();
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
