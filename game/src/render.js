@@ -1,10 +1,14 @@
-// render.js — turns the state into the table the player sees. Cards are DOM
-// (crisp at any size, clickable, legible at thumbnail size); the painted table
-// illustration sits behind them and ember motes drift on a canvas overlay.
-import { AI_NAME, ELEMENTS, PLAYER_NAME, TUNING } from './config.js';
+// render.js — turns the state into the table the player sees.
+// Every card face leads with its painted illustration (assets/cards/),
+// framed by the element's colours; the cost gem and the element badge sit
+// on the art itself, and the name, element and text live in their own
+// bands below it, so no word ever has to be clipped to fit.
+// The table is DOM over the painted hall illustrations; ember motes drift
+// on a canvas overlay.
+import { AI_NAME, CARD_DEFS, ELEMENTS, PLAYER_NAME, TUNING, cardArtPath } from './config.js';
 
-// Element glyphs as inline SVG: flame, wave, leaf, mountain. Suits are told
-// apart by colour AND shape, never by text alone.
+// Element glyphs as inline SVG paths: flame, wave, leaf, mountain.
+// A suit can be told by shape alone, by colour alone, or by both.
 export const ELEMENT_GLYPHS = {
   flame: '<svg viewBox="0 0 24 24"><path d="M12 2c1 3-2 4.5-2 7 0 1.5 1 2.5 2 2.5S14 10 14 8.5c2 1.5 3 3.5 3 5.5a5 5 0 0 1-10 0c0-4 3-7 5-12z"/></svg>',
   tide: '<svg viewBox="0 0 24 24"><path d="M2 9c2.5-2.5 5-2.5 7.5 0S14.5 11.5 17 9s3.5-2 5 0v2.5c-2.5-2-5-2-7.5.5S9.5 14.5 7 12 4 10 2 11.5zM2 16c2.5-2.5 5-2.5 7.5 0s5 2.5 7.5 0 3.5-2 5 0v2.5c-2.5-2-5-2-7.5.5S9.5 21.5 7 19s-3-2-5-.5z"/></svg>',
@@ -22,33 +26,57 @@ function el(tag, cls, html) {
   return node;
 }
 
-function elementStyle(element) {
+function frameStyle(element) {
   const e = ELEMENTS[element];
-  return `background:linear-gradient(160deg, ${e.color} 0%, ${e.dark} 100%);--el-light:${e.light};--el-ink:${e.ink};`;
+  return `background:linear-gradient(165deg, ${e.color} 0%, ${e.dark} 88%);--el-light:${e.light};--el-ink:${e.ink};`;
 }
 
-/** One card face. `opts` picks hand/board/back and wires data attributes. */
+/** Fetch every painted face (and the card back) before the first duel,
+ * so a card never flashes blank when it is dealt. */
+export function preloadCardArt() {
+  for (const def of CARD_DEFS) {
+    const img = new Image();
+    img.src = cardArtPath(def.id);
+  }
+  const back = new Image();
+  back.src = 'assets/card-back.jpg';
+}
+
+/** One card face. `opts` picks hand/board/back and the interaction flags. */
 export function buildCardEl(card, opts = {}) {
   const { inHand = false, onBoard = false, back = false, selected = false, playable = false, canAttack = false, resting = false } = opts;
   if (back) {
     const node = el('div', 'card card-back');
-    node.innerHTML = `<div class="card-back-glyph">${ELEMENT_GLYPHS.flame}</div><div class="card-back-word">EMBER<br>COURT</div>`;
+    const img = el('img', 'card-back-img');
+    img.src = 'assets/card-back.jpg';
+    img.alt = 'Ember Court card back';
+    node.appendChild(img);
     return node;
   }
   const e = ELEMENTS[card.element];
-  const node = el('div', `card el-${card.element}${inHand ? ' in-hand' : ''}${onBoard ? ' on-board' : ''}${selected ? ' selected' : ''}${playable ? ' playable' : ''}${canAttack ? ' can-attack' : ''}${resting ? ' resting' : ''}`);
-  node.style.cssText = elementStyle(card.element);
+  const classes = ['card', `el-${card.element}`];
+  if (inHand) classes.push('in-hand');
+  if (onBoard) classes.push('on-board');
+  if (selected) classes.push('selected');
+  if (playable) classes.push('playable');
+  if (canAttack) classes.push('can-attack');
+  if (resting) classes.push('resting');
+  const node = el('div', classes.join(' '));
+  node.style.cssText = frameStyle(card.element);
   node.dataset.uid = String(card.uid);
   const stats = card.kind === 'creature'
     ? `<div class="card-atk" title="Attack">${card.attack}</div><div class="card-hp" title="Health">${card.health}</div>`
     : `<div class="card-spell-tag">SPELL</div>`;
   node.innerHTML = `
-    <div class="card-cost">${card.cost}</div>
-    <div class="card-glyph">${ELEMENT_GLYPHS[card.element]}</div>
+    <div class="card-art">
+      <img src="${cardArtPath(card.defId)}" alt="${card.name} artwork">
+      <div class="card-cost">${card.cost}</div>
+      <div class="card-badge">${ELEMENT_GLYPHS[card.element]}</div>
+    </div>
     <div class="card-name">${card.name}</div>
     <div class="card-element-label">${e.label}</div>
     <div class="card-text">${card.text}</div>
-    ${stats}`;
+    <div class="card-stats">${stats}</div>`;
   return node;
 }
 
@@ -64,7 +92,11 @@ export function renderAll(state, ui, refs) {
 function renderHeroes(state, refs) {
   setHero(refs.aiHero, AI_NAME, state.ai, state.sideToMove === 'ai');
   setHero(refs.playerHero, PLAYER_NAME, state.player, state.sideToMove === 'player');
-  refs.turnLabel.textContent = state.winner ? 'Duel over' : state.sideToMove === 'player' ? `Your turn — Turn ${state.turn}` : `Veyla's turn — Turn ${state.turn}`;
+  refs.turnLabel.textContent = state.winner
+    ? 'Duel over'
+    : state.sideToMove === 'player'
+      ? `Your turn — Turn ${state.turn}`
+      : `Veyla's turn — Turn ${state.turn}`;
   refs.scoreLine.textContent = `Damage dealt ${state.player.damageDealt} · Cards played ${state.player.cardsPlayed} · Deck ${state.player.deck.length}`;
 }
 
@@ -73,13 +105,12 @@ function setHero(node, name, side, isActive) {
   node.querySelector('.hero-life-num').textContent = String(side.life);
   node.querySelector('.hero-life-max').textContent = `/ ${side.maxLife}`;
   const hearts = node.querySelector('.hero-hearts');
-  hearts.innerHTML = HEART_SVG.repeat(1);
+  hearts.innerHTML = HEART_SVG;
   hearts.classList.toggle('low', side.life <= 10);
   const embers = node.querySelector('.hero-embers');
   embers.innerHTML = '';
   for (let i = 0; i < side.maxEmber; i += 1) {
-    const gem = el('span', `ember-gem${i < side.ember ? ' lit' : ''}`, EMBER_SVG);
-    embers.appendChild(gem);
+    embers.appendChild(el('span', `ember-gem${i < side.ember ? ' lit' : ''}`, EMBER_SVG));
   }
   node.classList.toggle('active', isActive);
 }
@@ -95,7 +126,7 @@ function renderBoard(node, board, side, state, ui) {
     const slot = el('div', 'board-slot');
     const card = board[i];
     if (card) {
-      const selected = ui.selectedAttacker !== null && side === 'player' && ui.selectedAttacker === i;
+      const selected = side === 'player' && ui.selectedAttacker === i;
       const canAttack = side === 'player' && state.phase === 'player' && card.canAttack;
       const cardEl = buildCardEl(card, { onBoard: true, selected, canAttack, resting: card.justPlayed });
       cardEl.dataset.side = side;
@@ -107,7 +138,7 @@ function renderBoard(node, board, side, state, ui) {
 }
 
 function renderHands(state, ui, refs) {
-  // Opponent's hand: face-down backs, fanned.
+  // Veyla's hand: painted backs, fanned.
   refs.aiHand.innerHTML = '';
   state.ai.hand.forEach((card, i) => {
     const back = buildCardEl(card, { back: true });
@@ -116,7 +147,7 @@ function renderHands(state, ui, refs) {
   });
   refs.aiHandCount.textContent = `${state.ai.hand.length} cards`;
 
-  // Player's hand: face-up, clickable.
+  // The player's hand: faces up, clickable, gently fanned.
   refs.playerHand.innerHTML = '';
   state.player.hand.forEach((card, i) => {
     const selected = ui.selectedHand === i;
@@ -159,7 +190,7 @@ function renderEndScreen(state, refs) {
   if (won) burstEmbers(refs);
 }
 
-/** A floater (damage number, heal, RESONANCE!) that rises and fades over a point. */
+/** A floater (damage number, heal, RESONANCE!) rising over a point. */
 export function showFloater(refs, text, x, y, kind) {
   const node = el('div', `floater ${kind || ''}`, text);
   node.style.left = `${x}px`;
@@ -187,14 +218,21 @@ function burstEmbers(refs) {
   }
 }
 
-/** Drifting ember motes on the background canvas. Cheap: ~36 particles, one rAF. */
+/** Drifting ember motes on the background canvas: ~36 particles, one rAF. */
 export function startEmbers(canvas) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
   const motes = [];
   for (let i = 0; i < 36; i += 1) {
-    motes.push({ x: Math.random() * W, y: Math.random() * H, r: 1 + Math.random() * 2.2, v: 0.12 + Math.random() * 0.35, drift: (Math.random() - 0.5) * 0.2, a: 0.25 + Math.random() * 0.5 });
+    motes.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: 1 + Math.random() * 2.2,
+      v: 0.12 + Math.random() * 0.35,
+      drift: (Math.random() - 0.5) * 0.2,
+      a: 0.25 + Math.random() * 0.5,
+    });
   }
   let last = performance.now();
   function frame(now) {
@@ -204,7 +242,10 @@ export function startEmbers(canvas) {
     for (const m of motes) {
       m.y -= (m.v * dt) / 16;
       m.x += (m.drift * dt) / 16;
-      if (m.y < -4) { m.y = H + 4; m.x = Math.random() * W; }
+      if (m.y < -4) {
+        m.y = H + 4;
+        m.x = Math.random() * W;
+      }
       ctx.globalAlpha = m.a;
       ctx.fillStyle = '#ffb347';
       ctx.beginPath();

@@ -1,6 +1,7 @@
-/* Ember Court — styles. One fixed 1280x720 table, scaled to the window by the
-   inline fit script in index.html. All art is the local table illustration;
-   every card, glyph and icon is drawn here or in render.js — no web fonts. */
+/* Ember Court — styles. One fixed 1280x720 table, scaled to the window by
+   the inline fit script in index.html. The hall illustrations and every
+   card face are local painted images; layout, gems and glyphs are CSS/SVG.
+   No web fonts, no network. */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: #0b0705; overflow: hidden; }
 body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #f3e9d2; }
@@ -84,19 +85,78 @@ button { font-family: inherit; cursor: pointer; }
 .board-slot .card { animation: dealIn .45s cubic-bezier(.2, .9, .3, 1.2) both; }
 @keyframes dealIn { from { transform: translateY(-26px) scale(.86); opacity: 0; } to { transform: none; opacity: 1; } }
 
-/* ---- cards ---- */
+/* ---- cards ----
+   A face is a column: painted art window (with the cost gem and the
+   element badge on the art), name band, element label, a text zone that
+   always has room for the whole line, and a stats band. Nothing overlaps
+   anything else, so nothing ever needs to be clipped. */
 .card {
   position: relative; flex: none;
   width: 104px; height: 146px; border-radius: 10px;
-  border: 2px solid rgba(255, 225, 160, .75);
+  border: 2px solid rgba(255, 225, 160, .8);
   box-shadow: 0 6px 16px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.35);
   overflow: hidden; text-align: center;
+  display: flex; flex-direction: column;
 }
-.card svg { fill: var(--el-light, #fff); }
+.card-art {
+  position: relative; flex: none;
+  height: 60px; margin: 4px 4px 0; border-radius: 6px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 232, 170, .65), 0 1px 4px rgba(0,0,0,.5);
+  background: #1a120a;
+}
+.card-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-cost {
+  position: absolute; top: 3px; left: 3px; z-index: 2;
+  width: 27px; height: 27px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #3f8cff, #123a7a);
+  clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  font: 800 15px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65);
+}
+.card-badge {
+  position: absolute; top: 3px; right: 3px; z-index: 2;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: rgba(10, 6, 3, .72); border: 1px solid rgba(255, 232, 170, .8);
+  display: flex; align-items: center; justify-content: center;
+}
+.card-badge svg { width: 13px; height: 13px; fill: var(--el-light, #fff); }
+.card-name {
+  margin: 3px 5px 0; padding: 2px; border-radius: 4px;
+  background: rgba(0, 0, 0, .55); color: #ffeec2;
+  font: 700 12px Georgia, serif; letter-spacing: .2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-element-label {
+  font-size: 8.5px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--el-ink, #fff); opacity: .92; margin-top: 2px;
+}
+.card-text {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 0 7px; font-size: 10px; line-height: 1.3; color: #f6ecd4;
+  text-shadow: 0 1px 2px rgba(0,0,0,.45);
+}
+.card-stats { position: relative; flex: none; height: 30px; }
+.card-atk, .card-hp {
+  position: absolute; bottom: 4px; width: 27px; height: 27px;
+  display: flex; align-items: center; justify-content: center;
+  font: 800 15px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65);
+}
+.card-atk { left: 5px; background: linear-gradient(160deg, #e8491d, #7a1e05); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.card-hp { right: 5px; background: linear-gradient(160deg, #3da33d, #123f16); clip-path: polygon(50% 0, 100% 12%, 100% 62%, 50% 100%, 0 62%, 0 12%); }
+.card-spell-tag {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.6); border: 1px solid rgba(255,225,160,.7); border-radius: 6px;
+  padding: 3px 10px; font: 800 10px system-ui, sans-serif; letter-spacing: 2px; color: #ffeec2;
+}
 .card.on-board { width: 96px; height: 130px; }
-.card.on-board .card-glyph svg { width: 34px; height: 34px; }
-.card.on-board .card-name { font-size: 12px; }
-.card.on-board .card-text { display: none; }
+.card.on-board .card-art { height: 48px; margin: 3px 3px 0; }
+.card.on-board .card-cost { width: 23px; height: 23px; font-size: 13px; }
+.card.on-board .card-badge { width: 18px; height: 18px; }
+.card.on-board .card-badge svg { width: 11px; height: 11px; }
+.card.on-board .card-name { font-size: 11px; margin-top: 2px; }
+.card.on-board .card-element-label { font-size: 8px; margin-top: 1px; }
+.card.on-board .card-text { font-size: 9.5px; padding: 0 5px; }
+.card.on-board .card-stats { height: 27px; }
+.card.on-board .card-atk, .card.on-board .card-hp { width: 24px; height: 24px; font-size: 13px; bottom: 3px; }
 .card.in-hand { margin: 0 -6px; transform: rotate(var(--fan, 0deg)); transform-origin: bottom center; transition: transform .16s ease, box-shadow .16s ease, margin .16s ease; animation: dealIn .4s cubic-bezier(.2, .9, .3, 1.2) both; }
 .card.in-hand:hover { transform: translateY(-16px) rotate(0deg); z-index: 5; }
 .card.in-hand.playable { box-shadow: 0 6px 16px rgba(0,0,0,.55), 0 0 0 2px rgba(255, 217, 138, .55), 0 0 18px rgba(255, 190, 80, .45); }
@@ -104,44 +164,14 @@ button { font-family: inherit; cursor: pointer; }
 .card.selected { transform: translateY(-18px) rotate(0deg); box-shadow: 0 0 0 3px #ffd98a, 0 0 26px rgba(255, 200, 90, .8); z-index: 6; }
 .card.can-attack { cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,.55), 0 0 0 2px rgba(255, 120, 60, .7), 0 0 16px rgba(255, 120, 60, .5); }
 .card.resting { filter: saturate(.55) brightness(.82); }
-.card-cost {
-  position: absolute; top: 5px; left: 5px; z-index: 2;
-  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(160deg, #3f8cff, #123a7a);
-  clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
-  font: 800 17px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6);
-}
-.card-glyph { margin-top: 8px; height: 46px; display: flex; align-items: center; justify-content: center; }
-.card-glyph svg { width: 44px; height: 44px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.55)); }
-.card-name {
-  margin: 2px 6px 0; padding: 3px 2px; border-radius: 5px;
-  background: rgba(0, 0, 0, .55); color: #ffeec2;
-  font: 700 13px Georgia, serif; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.card-element-label { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--el-ink, #fff); opacity: .9; margin-top: 2px; }
-.card-text { margin: 5px 8px 0; font-size: 10.5px; line-height: 1.25; color: #f6ecd4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-atk, .card-hp {
-  position: absolute; bottom: 5px; width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  font: 800 16px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.65);
-}
-.card-atk { left: 5px; background: linear-gradient(160deg, #e8491d, #7a1e05); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
-.card-hp { right: 5px; background: linear-gradient(160deg, #3da33d, #123f16); clip-path: polygon(50% 0, 100% 12%, 100% 62%, 50% 100%, 0 62%, 0 12%); }
-.card-spell-tag {
-  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,.6); border: 1px solid rgba(255,225,160,.7); border-radius: 6px;
-  padding: 3px 10px; font: 800 11px system-ui, sans-serif; letter-spacing: 2px; color: #ffeec2;
-}
-/* card backs (opponent's hand) */
+/* card backs (Veyla's hand): the painted back fills the whole card */
 .card-back {
-  width: 52px; height: 72px; margin: 0 -4px;
-  background: linear-gradient(160deg, #5c1a08, #2a0a02);
-  border: 2px solid rgba(212, 175, 105, .8);
+  width: 52px; height: 72px; margin: 0 -4px; padding: 0;
+  border: 2px solid rgba(212, 175, 105, .85);
   transform: rotate(var(--fan, 0deg)); transform-origin: bottom center;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  display: block;
 }
-.card-back-glyph svg { width: 22px; height: 22px; fill: #ffb347; }
-.card-back-word { font: 700 7px system-ui, sans-serif; letter-spacing: 1.5px; color: #d8b96a; text-align: center; }
+.card-back-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* ---- midline ---- */
 #log { flex: 1; font-size: 13.5px; line-height: 1.45; color: #efe3c0; text-shadow: 0 1px 3px #000; min-height: 44px; }
@@ -184,8 +214,8 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes shakeIt { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-5px,2px); } 40% { transform: translate(5px,-2px); } 60% { transform: translate(-4px,-2px); } 80% { transform: translate(4px,2px); } }
 
 /* ---- overlays ---- */
-/* While a full-screen overlay (title / end) is up, hide the table UI so the
-   overlay reads cleanly against the painted table, not against the board. */
+/* While a full-screen overlay (title / end) is up, hide the table UI so
+   the overlay reads cleanly against the painted hall, not the board. */
 #stage.overlay-up #topbar, #stage.overlay-up #ai-hand, #stage.overlay-up .board,
 #stage.overlay-up #midline, #stage.overlay-up #player-hand, #stage.overlay-up #bottombar {
   visibility: hidden;
@@ -196,29 +226,63 @@ button { font-family: inherit; cursor: pointer; }
   background: radial-gradient(ellipse at 50% 40%, rgba(20,12,4,.78), rgba(5,3,2,.94));
 }
 .overlay.show { display: flex; }
-.title-inner, .end-inner { text-align: center; max-width: 780px; padding: 24px; }
-.title-kicker { letter-spacing: 5px; font-size: 13px; color: #d8b96a; }
+
+/* Title screen: the painted hall itself is the backdrop — bright and
+   alive — under a soft veil that keeps the words readable. */
+#title-screen { background: #120a05; overflow: hidden; }
+#title-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+#title-screen::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 44%, rgba(10,6,2,.58) 0%, rgba(10,6,2,.30) 52%, rgba(10,6,2,.66) 100%);
+}
+.title-inner { position: relative; z-index: 2; text-align: center; max-width: 800px; padding: 24px; }
+.title-kicker { letter-spacing: 5px; font-size: 13px; color: #ffd98a; text-shadow: 0 1px 6px #000, 0 0 18px rgba(255,180,80,.5); }
 .title-inner h1 {
   font: 800 92px Georgia, serif; letter-spacing: 4px; line-height: 1.02; margin: 8px 0 10px;
-  color: #ffe9b0; text-shadow: 0 0 34px rgba(255, 170, 60, .55), 0 4px 0 #7a4a08, 0 8px 24px rgba(0,0,0,.8);
+  color: #ffe9b0; text-shadow: 0 0 34px rgba(255, 170, 60, .6), 0 4px 0 #7a4a08, 0 8px 24px rgba(0,0,0,.85);
 }
-.title-sub { font-size: 17px; line-height: 1.55; color: #f3e9d2; text-shadow: 0 1px 4px #000; }
+.title-sub { font-size: 17px; line-height: 1.55; color: #fdf6e0; text-shadow: 0 1px 5px #000, 0 2px 14px rgba(0,0,0,.9); }
 .title-sub b { color: #ffd98a; }
-.legend { display: flex; justify-content: center; gap: 18px; margin: 18px 0 22px; }
-.legend-item { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.legend { display: flex; justify-content: center; gap: 10px; margin: 18px 0 24px; }
+.legend-item {
+  font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px;
+  background: rgba(8,5,2,.66); border: 1px solid rgba(255,225,160,.4);
+  border-radius: 999px; padding: 5px 13px 5px 9px; text-shadow: 0 1px 3px #000;
+}
 .legend-item i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .legend-item.el-flame i { background: #e8491d; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .legend-item.el-tide i { background: #1d7fd6; border-radius: 50%; }
 .legend-item.el-leaf i { background: #3da33d; transform: rotate(45deg); }
 .legend-item.el-stone i { background: #c98a2b; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
-#play-btn, #again-btn {
-  padding: 16px 44px; border-radius: 14px; border: 2px solid #ffe9b0;
+/* The Play button carries the court's flame: a bright struck-gold plate,
+   an ember glow that breathes, and the flame emblem of the house. */
+#play-btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 15px 42px; border-radius: 14px; border: 2px solid #ffedb5;
+  background: linear-gradient(180deg, #ffd873 0%, #eec04a 46%, #c08c1d 100%);
+  color: #2a1802;
+  font: 800 25px system-ui, sans-serif; letter-spacing: 1.5px;
+  box-shadow: 0 8px 26px rgba(0,0,0,.65), 0 0 38px rgba(255, 190, 80, .5),
+    inset 0 1px 0 rgba(255,255,255,.75), inset 0 -3px 0 rgba(90, 50, 0, .35);
+  animation: emberPulse 2.6s ease-in-out infinite;
+  transition: transform .15s ease, filter .15s ease;
+}
+#play-btn svg { width: 27px; height: 27px; fill: #7a3403; filter: drop-shadow(0 0 6px rgba(255, 140, 40, .8)); }
+#play-btn:hover { filter: brightness(1.1); transform: translateY(-2px) scale(1.02); }
+@keyframes emberPulse {
+  0%, 100% { box-shadow: 0 8px 26px rgba(0,0,0,.65), 0 0 30px rgba(255, 190, 80, .42), inset 0 1px 0 rgba(255,255,255,.75), inset 0 -3px 0 rgba(90, 50, 0, .35); }
+  50% { box-shadow: 0 8px 26px rgba(0,0,0,.65), 0 0 52px rgba(255, 180, 70, .68), inset 0 1px 0 rgba(255,255,255,.75), inset 0 -3px 0 rgba(90, 50, 0, .35); }
+}
+#again-btn {
+  padding: 14px 36px; border-radius: 14px; border: 2px solid #ffe9b0;
   background: linear-gradient(180deg, #e8b64c, #a4761a); color: #241503;
-  font: 800 24px system-ui, sans-serif; letter-spacing: 1px;
+  font: 800 20px system-ui, sans-serif; letter-spacing: 1px;
   box-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 30px rgba(255, 190, 80, .35);
 }
-#play-btn:hover, #again-btn:hover { filter: brightness(1.12); }
-.title-foot { margin-top: 18px; font-size: 12.5px; color: #cbb98f; }
+#again-btn:hover { filter: brightness(1.12); }
+.title-foot { margin-top: 18px; font-size: 12.5px; color: #e6d3a0; text-shadow: 0 1px 4px #000; }
+
+.end-inner { text-align: center; max-width: 780px; padding: 24px; }
 .end-title { font: 800 84px Georgia, serif; letter-spacing: 6px; line-height: 1; }
 .end-title.win { color: #ffd98a; text-shadow: 0 0 40px rgba(255, 190, 80, .7), 0 4px 0 #7a4a08, 0 8px 24px #000; }
 .end-title.lose { color: #ff6b5e; text-shadow: 0 0 40px rgba(255, 60, 40, .55), 0 4px 0 #5c0f08, 0 8px 24px #000; }

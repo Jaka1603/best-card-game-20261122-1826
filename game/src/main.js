@@ -1,13 +1,13 @@
-// main.js — wiring only. It collects the DOM, owns the selection UI state,
-// runs the turn loop, and exposes window.__game for headless probes.
-import { runTurn } from './ai.js';
+// main.js — wiring only: collect the DOM, own the selection state, run
+// the turn loop, stage screenshot scenes, and expose window.__game so
+// headless probes can play the real game the way a person would.
+import { applyAction, planNextAction, runTurn } from './ai.js';
 import { sfx, toggleMute } from './audio.js';
 import { bindInput } from './input.js';
-import { renderAll, showFloater, shakeStage, startEmbers } from './render.js';
+import { preloadCardArt, renderAll, shakeStage, showFloater, startEmbers } from './render.js';
 import { endTurn } from './rules.js';
-import { stageShot, simulateDuel } from './shots.js';
+import { simulateDuel, stageShot } from './shots.js';
 import { createGame, startDuel } from './state.js';
-import { applyAction, planNextAction } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -49,6 +49,7 @@ function render() {
   renderAll(state, ui, refs);
 }
 
+/** A point on the stage above a hero panel or a board slot, for floaters. */
 function stagePoint(target) {
   const stageRect = refs.stage.getBoundingClientRect();
   if (target.kind === 'hero') {
@@ -63,17 +64,31 @@ function stagePoint(target) {
   return { x: r.left - stageRect.left + r.width / 2, y: r.top - stageRect.top + r.height / 2 };
 }
 
-/** Sounds + floaters for one rules result, then a re-render. */
+/** Sounds and floaters for one rules result, then a fresh render. */
 function afterPlayerAction(result) {
-  if (!result || !result.ok) { if (result) sfx.error(); return; }
+  if (!result || !result.ok) {
+    if (result) sfx.error();
+    return;
+  }
   render();
   for (const ev of result.events) {
     if (ev.type === 'play') sfx.playCard();
-    if (ev.type === 'resonance') { sfx.resonance(); showFloater(refs, 'RESONANCE! +1/+1', 640, 300, 'resonance'); }
+    if (ev.type === 'resonance') {
+      sfx.resonance();
+      showFloater(refs, 'RESONANCE! +1/+1', 640, 300, 'resonance');
+    }
     if (ev.type === 'damage') {
-      const p = stagePoint(ev.target === 'hero' ? { kind: 'hero', side: ev.side } : { kind: 'creature', side: ev.side, index: ev.index });
+      const target = ev.target === 'hero'
+        ? { kind: 'hero', side: ev.side }
+        : { kind: 'creature', side: ev.side, index: ev.index };
+      const p = stagePoint(target);
       showFloater(refs, `-${ev.amount}`, p.x, p.y, ev.amount >= 4 ? 'dmg-big' : 'dmg');
-      if (ev.amount >= 4) { sfx.bigHit(); shakeStage(refs, true); } else sfx.hit();
+      if (ev.amount >= 4) {
+        sfx.bigHit();
+        shakeStage(refs, true);
+      } else {
+        sfx.hit();
+      }
     }
     if (ev.type === 'heal') {
       const p = stagePoint({ kind: 'hero', side: ev.side });
@@ -85,7 +100,8 @@ function afterPlayerAction(result) {
   }
   if (state.winner && !endSoundPlayed) {
     endSoundPlayed = true;
-    if (state.winner === 'player') sfx.win(); else sfx.lose();
+    if (state.winner === 'player') sfx.win();
+    else sfx.lose();
   }
 }
 
@@ -94,13 +110,13 @@ async function endPlayerTurn() {
   ui.selectedHand = null;
   ui.selectedAttacker = null;
   ui.hint = '';
-  endTurn(state); // -> ai
+  endTurn(state); // to Veyla
   state.aiBusy = true;
   render();
   await runTurn(state, 'ai', (action, result) => afterPlayerAction(result), 650);
   state.aiBusy = false;
   if (!state.winner) {
-    endTurn(state); // -> player, turn + 1
+    endTurn(state); // back to the player, turn + 1
     sfx.turn();
   }
   render();
@@ -139,16 +155,17 @@ const api = {
 };
 
 bindInput(api);
+preloadCardArt();
 startEmbers(refs.embers);
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'm' || ev.key === 'M') {
-    const muted = toggleMute();
-    refs.muteBtn.textContent = muted ? 'Sound: off (M)' : 'Sound: on (M)';
+    const nowMuted = toggleMute();
+    refs.muteBtn.textContent = nowMuted ? 'Sound: off (M)' : 'Sound: on (M)';
   }
 });
 
-// Debug + probe handle: state, UI, and the planners the probes drive.
+// Probe handle: the state, the UI, and the planners a probe can drive.
 window.__game = {
   get state() { return state; },
   ui,
@@ -162,7 +179,7 @@ window.__game = {
 };
 
 if (shotName) {
-  // Staged screenshot scene: the real rules, a fixed seed, no waiting.
+  // A staged screenshot scene: real rules, a fixed seed, no waiting.
   state = stageShot(shotName);
   if (state.screen === 'over') {
     refs.titleScreen.classList.remove('show');

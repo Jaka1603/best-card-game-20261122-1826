@@ -34,3 +34,13 @@ by the builder subagent; no submit (parent agent owns bundle/check/submit).
 - game/ — index.html, styles.css, package.json, src/*.js (11 modules), assets/table.jpg (1280×720, 159 KB)
 - screenshots/ — 1-title.jpg (80 KB), 2-table.jpg (193 KB), 3-win.jpg (62 KB), 4-loss.jpg (60 KB); all 1280×720 JPEG
 - main.ts, serve.ts, vendor/makefun-game.ts (kit copy, unchanged), LICENSE (MIT, kit copy), .makefun/owner.json, shots.json, research.md, README.md
+
+## V2 (23 Nov 2026, Jaka-ordered fixes)
+
+Jaka rejected the v1 submit; v2 was built locally the same morning —
+painted faces for all 19 cards, card texts rewritten short and verified
+uncut, rebuilt title screen with a painted hall and a flame-emblem Play
+button, painted card back. Mechanics/stats/balance unchanged (23–17).
+QA: unit 33/33, browser 14/14, all four screenshots re-shot and
+eye-checked. Full record: V2-NOTES.md. Not pushed, not submitted —
+parent agent owns bundle/check/submit after Jaka approves the shots.

@@ -1,6 +1,6 @@
-// state.js — the one mutable game state. Every system reads and writes this
-// object and nothing else, so the live game, the autopilot and the screenshot
-// staging (shots.js) all run the same duel.
+// state.js — the one mutable state object for a duel. Rules, AI, renderer
+// and screenshot staging all read and write this shape and nothing else,
+// so a staged scene and a live game are the same thing underneath.
 import { TUNING } from './config.js';
 import { mulberry32 } from './random.js';
 import { buildDeck, drawFrom } from './deck.js';
@@ -17,35 +17,35 @@ function freshSide(rng) {
     deck: buildDeck(rng),
     hand: [],
     board: [],
-    lastElement: null, // element of the last card this side played this turn (resonance)
+    lastElement: null, // element of the last card played this turn (resonance chain)
     cardsPlayed: 0,
     damageDealt: 0,
     spellsCast: 0,
   };
 }
 
-/** Create a new duel state for `seed`; the duel starts when startDuel runs. */
+/** A new duel for `seed`. Nothing is dealt until startDuel runs. */
 export function createGame(seed) {
   const rng = mulberry32(seed);
-  const state = {
+  return {
     seed,
     rng,
     screen: 'title', // title | play | over
     turn: 1,
     sideToMove: SIDE_PLAYER,
     phase: 'title', // title | player | ai | over
-    winner: null, // 'player' | 'ai' | null
+    winner: null,
     player: freshSide(rng),
     ai: freshSide(rng),
     log: [],
     stats: { turnsPlayed: 0, cardsPlayed: 0, damageDealt: 0 },
     aiBusy: false,
   };
-  return state;
 }
 
-/** Deal opening hands and open the table. The player always moves first;
- * Veyla, moving second, draws one extra card and starts with 2 ember. */
+/** Deal the opening hands and open the table. The player moves first;
+ * Veyla's compensation for moving second is one extra card and a second
+ * ember on her first turn only. */
 export function startDuel(state) {
   state.screen = 'play';
   state.phase = 'player';

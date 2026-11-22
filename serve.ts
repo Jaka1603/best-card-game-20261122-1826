@@ -6,12 +6,25 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('./game/', import.meta.url));
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.jpg': 'image/jpeg', '.png': 'image/png', '.json': 'application/json' };
+const types = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.json': 'application/json',
+};
 
 const server = createServer(async (req, res) => {
   try {
-    const path = join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html');
-    if (!path.startsWith(root)) { res.writeHead(403); res.end(); return; }
+    const rel = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html';
+    const path = join(root, rel);
+    if (!path.startsWith(root)) {
+      res.writeHead(403);
+      res.end();
+      return;
+    }
     const data = await readFile(path);
     res.writeHead(200, { 'content-type': types[extname(path)] ?? 'application/octet-stream' });
     res.end(data);

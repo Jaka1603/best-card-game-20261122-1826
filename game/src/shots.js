@@ -1,14 +1,13 @@
-// shots.js — the screenshot scenes behind ?shot=title|play|win|loss.
-// Each scene plays the REAL rules forward from a fresh duel with a fixed seed,
-// steered by the same autopilot that drives QA (planNextAction), so the frame
-// is what a short game really looks like and the same seed always gives the
-// same frame. Win/loss scenes search seeds until the autopilot duel ends the
-// way the shot needs, then render that real final state.
+// shots.js — the staged scenes behind ?shot=title|play|win|loss.
+// A scene is not a mock-up: it plays the real rules forward from a fresh
+// duel on a fixed seed, steered by the same planner that plays Veyla, so
+// the photographed frame is a frame a real game genuinely reaches — and
+// the same seed always reaches the same frame.
 import { applyAction, planNextAction } from './ai.js';
 import { endTurn } from './rules.js';
 import { createGame, startDuel } from './state.js';
 
-/** Play one whole turn synchronously (no animation delays) for `side`. */
+/** Play one whole turn at once (no animation delays) for `side`. */
 export function runTurnSync(state, side) {
   for (let guard = 0; guard < 40; guard += 1) {
     if (state.winner) break;
@@ -18,22 +17,22 @@ export function runTurnSync(state, side) {
   }
 }
 
-/** Play a full duel synchronously; returns the winner ('player' | 'ai' | null). */
+/** Play a whole duel at once; returns { state, winner }. */
 export function simulateDuel(seed, maxTurns = 60) {
   const state = createGame(seed);
   startDuel(state);
   while (!state.winner && state.turn <= maxTurns) {
     runTurnSync(state, 'player');
     if (state.winner) break;
-    endTurn(state); // -> ai
+    endTurn(state); // to Veyla
     runTurnSync(state, 'ai');
     if (state.winner) break;
-    endTurn(state); // -> player, turn + 1
+    endTurn(state); // back to the player, turn + 1
   }
   return { state, winner: state.winner };
 }
 
-/** A mid-game state worth photographing: both boards busy, hands full, turn 4+. */
+/** A mid-game worth photographing: both boards busy, both hands full. */
 function findPlayState() {
   for (let seed = 1; seed <= 80; seed += 1) {
     const state = createGame(seed);
@@ -47,15 +46,14 @@ function findPlayState() {
       endTurn(state);
     }
     if (state.winner) continue;
-    if (state.player.board.length >= 2 && state.ai.board.length >= 2
-      && state.player.hand.length >= 3 && state.ai.hand.length >= 2) {
-      return state;
-    }
+    const busy = state.player.board.length >= 2 && state.ai.board.length >= 2;
+    const full = state.player.hand.length >= 3 && state.ai.hand.length >= 2;
+    if (busy && full) return state;
   }
   return null;
 }
 
-/** The first seed whose autopilot duel ends with `wanted` winning. */
+/** The first seed whose autopilot duel ends with `wanted` as the winner. */
 function findEndState(wanted) {
   for (let seed = 1; seed <= 80; seed += 1) {
     const { state, winner } = simulateDuel(seed);
@@ -64,19 +62,10 @@ function findEndState(wanted) {
   return null;
 }
 
-/**
- * Stage the named scene on a fresh state and return it (title, play, win, loss;
- * anything else is title). The caller renders the returned state.
- */
+/** Stage the named scene on a fresh state and hand it back for rendering. */
 export function stageShot(name) {
-  if (name === 'play') {
-    return findPlayState() ?? createGame(7);
-  }
-  if (name === 'win') {
-    return findEndState('player') ?? createGame(7);
-  }
-  if (name === 'loss') {
-    return findEndState('ai') ?? createGame(7);
-  }
+  if (name === 'play') return findPlayState() ?? createGame(7);
+  if (name === 'win') return findEndState('player') ?? createGame(7);
+  if (name === 'loss') return findEndState('ai') ?? createGame(7);
   return createGame(7);
 }
