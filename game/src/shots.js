@@ -1,13 +1,12 @@
 // shots.js — the staged scenes behind ?shot=title|play|win|loss.
-// A scene is not a mock-up: it plays the real rules forward from a fresh
-// duel on a fixed seed, steered by the same planner that plays Veyla, so
-// the photographed frame is a frame a real game genuinely reaches — and
-// the same seed always reaches the same frame.
+// A scene is played, not posed: the autopilot fights real turns from a
+// fresh duel on a fixed seed until the frame the screenshot names is
+// genuinely reached, so the same seed always photographs the same game.
 import { applyAction, planNextAction } from './ai.js';
 import { endTurn } from './rules.js';
 import { createGame, startDuel } from './state.js';
 
-/** Play one whole turn at once (no animation delays) for `side`. */
+/** One whole turn for `side`, applied at once (no animation delays). */
 export function runTurnSync(state, side) {
   for (let guard = 0; guard < 40; guard += 1) {
     if (state.winner) break;
@@ -17,7 +16,7 @@ export function runTurnSync(state, side) {
   }
 }
 
-/** Play a whole duel at once; returns { state, winner }. */
+/** A whole duel, both sides on autopilot; returns { state, winner }. */
 export function simulateDuel(seed, maxTurns = 60) {
   const state = createGame(seed);
   startDuel(state);
@@ -32,7 +31,8 @@ export function simulateDuel(seed, maxTurns = 60) {
   return { state, winner: state.winner };
 }
 
-/** A mid-game worth photographing: both boards busy, both hands full. */
+/** The first seed that reaches a photogenic turn 5: both boards busy,
+ * both hands still holding cards, nobody dead yet. */
 function findPlayState() {
   for (let seed = 1; seed <= 80; seed += 1) {
     const state = createGame(seed);
@@ -53,7 +53,7 @@ function findPlayState() {
   return null;
 }
 
-/** The first seed whose autopilot duel ends with `wanted` as the winner. */
+/** The first seed whose autopilot duel ends with `wanted` the winner. */
 function findEndState(wanted) {
   for (let seed = 1; seed <= 80; seed += 1) {
     const { state, winner } = simulateDuel(seed);
@@ -62,7 +62,7 @@ function findEndState(wanted) {
   return null;
 }
 
-/** Stage the named scene on a fresh state and hand it back for rendering. */
+/** Stage the named scene on a fresh state and return it for rendering. */
 export function stageShot(name) {
   if (name === 'play') return findPlayState() ?? createGame(7);
   if (name === 'win') return findEndState('player') ?? createGame(7);

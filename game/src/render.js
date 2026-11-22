@@ -1,14 +1,17 @@
-// render.js — turns the state into the table the player sees.
-// Every card face leads with its painted illustration (assets/cards/),
-// framed by the element's colours; the cost gem and the element badge sit
-// on the art itself, and the name, element and text live in their own
-// bands below it, so no word ever has to be clipped to fit.
-// The table is DOM over the painted hall illustrations; ember motes drift
-// on a canvas overlay.
+// render.js — state in, table out.
+// A card face is ONE painted object, built in layers that share a
+// single material: a parchment ground tinted by the element, the
+// painting laid full-bleed across the top and feathered into that
+// ground (never a pasted rectangle), the name burned into the fade on
+// a feathered scrim, and — over everything — a worn gilt frame and one
+// grain-and-sheen skin, so art, words and stats all sit under the same
+// light and the same wear. The table adds its own final grade over the
+// whole scene (see styles.css: #grade-light, #grade-grain, #embers),
+// so the cards rest IN the hall instead of floating on top of it.
 import { AI_NAME, CARD_DEFS, ELEMENTS, PLAYER_NAME, TUNING, cardArtPath } from './config.js';
 
-// Element glyphs as inline SVG paths: flame, wave, leaf, mountain.
-// A suit can be told by shape alone, by colour alone, or by both.
+// Element glyphs as inline SVG paths: flame, wave, leaf, mountain —
+// a suit can be told by shape alone, by colour alone, or by both.
 export const ELEMENT_GLYPHS = {
   flame: '<svg viewBox="0 0 24 24"><path d="M12 2c1 3-2 4.5-2 7 0 1.5 1 2.5 2 2.5S14 10 14 8.5c2 1.5 3 3.5 3 5.5a5 5 0 0 1-10 0c0-4 3-7 5-12z"/></svg>',
   tide: '<svg viewBox="0 0 24 24"><path d="M2 9c2.5-2.5 5-2.5 7.5 0S14.5 11.5 17 9s3.5-2 5 0v2.5c-2.5-2-5-2-7.5.5S9.5 14.5 7 12 4 10 2 11.5zM2 16c2.5-2.5 5-2.5 7.5 0s5 2.5 7.5 0 3.5-2 5 0v2.5c-2.5-2-5-2-7.5.5S9.5 21.5 7 19s-3-2-5-.5z"/></svg>',
@@ -26,23 +29,24 @@ function el(tag, cls, html) {
   return node;
 }
 
-function frameStyle(element) {
+function tintVars(element) {
   const e = ELEMENTS[element];
-  return `background:linear-gradient(165deg, ${e.color} 0%, ${e.dark} 88%);--el-light:${e.light};--el-ink:${e.ink};`;
+  return `--el-color:${e.color};--el-dark:${e.dark};--el-light:${e.light};--el-ink:${e.ink};`;
 }
 
-/** Fetch every painted face (and the card back) before the first duel,
- * so a card never flashes blank when it is dealt. */
+/** Warm every image the table will show, so nothing flashes blank. */
 export function preloadCardArt() {
   for (const def of CARD_DEFS) {
     const img = new Image();
     img.src = cardArtPath(def.id);
   }
-  const back = new Image();
-  back.src = 'assets/card-back.jpg';
+  for (const extra of ['assets/card-back.jpg', 'assets/parchment.jpg']) {
+    const img = new Image();
+    img.src = extra;
+  }
 }
 
-/** One card face. `opts` picks hand/board/back and the interaction flags. */
+/** One card. `opts` picks hand/board/back and the interaction flags. */
 export function buildCardEl(card, opts = {}) {
   const { inHand = false, onBoard = false, back = false, selected = false, playable = false, canAttack = false, resting = false } = opts;
   if (back) {
@@ -51,6 +55,8 @@ export function buildCardEl(card, opts = {}) {
     img.src = 'assets/card-back.jpg';
     img.alt = 'Ember Court card back';
     node.appendChild(img);
+    node.appendChild(el('div', 'card-frame'));
+    node.appendChild(el('div', 'card-skin'));
     return node;
   }
   const e = ELEMENTS[card.element];
@@ -62,21 +68,32 @@ export function buildCardEl(card, opts = {}) {
   if (canAttack) classes.push('can-attack');
   if (resting) classes.push('resting');
   const node = el('div', classes.join(' '));
-  node.style.cssText = frameStyle(card.element);
+  node.style.cssText = tintVars(card.element);
   node.dataset.uid = String(card.uid);
+  // Each card wears the shared parchment at a different offset, the way
+  // no two hand-painted cards ever quite match.
+  const gx = (card.uid * 37) % 61;
+  const gy = (card.uid * 53) % 61;
+  node.style.backgroundPosition = `${gx}% ${gy}%`;
   const stats = card.kind === 'creature'
     ? `<div class="card-atk" title="Attack">${card.attack}</div><div class="card-hp" title="Health">${card.health}</div>`
     : `<div class="card-spell-tag">SPELL</div>`;
   node.innerHTML = `
+    <div class="card-base"></div>
     <div class="card-art">
       <img src="${cardArtPath(card.defId)}" alt="${card.name} artwork">
       <div class="card-cost">${card.cost}</div>
       <div class="card-badge">${ELEMENT_GLYPHS[card.element]}</div>
     </div>
-    <div class="card-name">${card.name}</div>
-    <div class="card-element-label">${e.label}</div>
-    <div class="card-text">${card.text}</div>
-    <div class="card-stats">${stats}</div>`;
+    <div class="card-scrim"></div>
+    <div class="card-body">
+      <div class="card-name">${card.name}</div>
+      <div class="card-element-label">${e.label}</div>
+      <div class="card-text">${card.text}</div>
+      <div class="card-stats">${stats}</div>
+    </div>
+    <div class="card-frame"></div>
+    <div class="card-skin" style="background-position:${gx}% ${gy}%"></div>`;
   return node;
 }
 
@@ -138,7 +155,7 @@ function renderBoard(node, board, side, state, ui) {
 }
 
 function renderHands(state, ui, refs) {
-  // Veyla's hand: painted backs, fanned.
+  // Veyla's hand: painted backs, fanned, resting on the same cloth.
   refs.aiHand.innerHTML = '';
   state.ai.hand.forEach((card, i) => {
     const back = buildCardEl(card, { back: true });
@@ -218,8 +235,12 @@ function burstEmbers(refs) {
   }
 }
 
-/** Drifting ember motes on the background canvas: ~36 particles, one rAF. */
+/** Drifting ember motes on a canvas: ~36 particles, one rAF loop.
+ * The table's canvas floats ABOVE the cards (see styles.css), so the
+ * motes cross the whole scene — paintings, frames and all — and the
+ * title screen runs the same drift over its hall. */
 export function startEmbers(canvas) {
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;

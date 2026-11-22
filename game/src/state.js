@@ -1,14 +1,15 @@
-// state.js — the one mutable state object for a duel. Rules, AI, renderer
-// and screenshot staging all read and write this shape and nothing else,
-// so a staged scene and a live game are the same thing underneath.
+// state.js — the single mutable object every part of the game shares.
+// Rules mutate it, the AI reads it, the renderer paints it, and the
+// screenshot staging drives it through real turns — so a photographed
+// frame and a live frame are the same kind of thing.
 import { TUNING } from './config.js';
-import { mulberry32 } from './random.js';
 import { buildDeck, drawFrom } from './deck.js';
+import { mulberry32 } from './random.js';
 
 export const SIDE_PLAYER = 'player';
 export const SIDE_AI = 'ai';
 
-function freshSide(rng) {
+function blankSide(rng) {
   return {
     life: TUNING.startLife,
     maxLife: TUNING.maxLife,
@@ -17,14 +18,14 @@ function freshSide(rng) {
     deck: buildDeck(rng),
     hand: [],
     board: [],
-    lastElement: null, // element of the last card played this turn (resonance chain)
+    lastElement: null, // element of the last card this side played this turn
     cardsPlayed: 0,
     damageDealt: 0,
     spellsCast: 0,
   };
 }
 
-/** A new duel for `seed`. Nothing is dealt until startDuel runs. */
+/** A fresh duel for `seed`; cards are dealt by startDuel, not here. */
 export function createGame(seed) {
   const rng = mulberry32(seed);
   return {
@@ -35,17 +36,16 @@ export function createGame(seed) {
     sideToMove: SIDE_PLAYER,
     phase: 'title', // title | player | ai | over
     winner: null,
-    player: freshSide(rng),
-    ai: freshSide(rng),
+    player: blankSide(rng),
+    ai: blankSide(rng),
     log: [],
     stats: { turnsPlayed: 0, cardsPlayed: 0, damageDealt: 0 },
     aiBusy: false,
   };
 }
 
-/** Deal the opening hands and open the table. The player moves first;
- * Veyla's compensation for moving second is one extra card and a second
- * ember on her first turn only. */
+/** Deal the opening hands. The player moves first; Veyla, moving
+ * second, opens with one extra card and a second ember on turn one. */
 export function startDuel(state) {
   state.screen = 'play';
   state.phase = 'player';

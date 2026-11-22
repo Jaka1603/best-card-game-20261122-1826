@@ -1,15 +1,15 @@
-// input.js — mouse and keyboard play, as one click flow:
-//   1. click a hand card to play it (a damage spell then asks for a target)
-//   2. click an enemy creature or Veyla's portrait to fire the spell
-//   3. click one of your ready creatures to make it the attacker
-//   4. click an enemy creature or Veyla's portrait to land the attack
+// input.js — how a person plays: one click flow for mouse and keys.
+//   1. Click a hand card to play it (a damage spell then asks for a target)
+//   2. Click an enemy creature or Veyla's portrait to land the spell
+//   3. Click one of your ready creatures to name it the attacker
+//   4. Click an enemy creature or Veyla's portrait to land the attack
 //   5. End Turn (button or Space) hands the table to Veyla
-// Clicking the selected thing again, or Esc, cancels the selection.
+// Clicking the chosen thing again — or pressing Esc — cancels it.
 import { attackCreature, playBlockReason, playCard } from './rules.js';
 import { SIDE_AI, SIDE_PLAYER } from './state.js';
 
 /**
- * Wire the stage's clicks and keys. `api` is what main.js owns:
+ * Wire clicks and keys onto the stage. `api` is main.js's surface:
  * { state, ui, refs, render, endPlayerTurn, playAgain, startGame,
  *   afterPlayerAction, toggleMute, sounds }.
  */
@@ -19,28 +19,28 @@ export function bindInput(api) {
   refs.playerHand.addEventListener('click', (ev) => {
     const cardEl = ev.target.closest('.card.in-hand');
     if (!cardEl || api.state.phase !== 'player' || api.state.winner) return;
-    selectHandCard(api, Number(cardEl.dataset.index));
+    pickHandCard(api, Number(cardEl.dataset.index));
   });
 
   refs.playerBoard.addEventListener('click', (ev) => {
     const cardEl = ev.target.closest('.card.on-board');
     if (!cardEl || api.state.phase !== 'player' || api.state.winner) return;
-    selectAttacker(api, Number(cardEl.dataset.index));
+    pickAttacker(api, Number(cardEl.dataset.index));
   });
 
   refs.aiBoard.addEventListener('click', (ev) => {
     const cardEl = ev.target.closest('.card.on-board');
     if (!cardEl) return;
-    resolveTargetClick(api, { kind: 'creature', side: SIDE_AI, index: Number(cardEl.dataset.index) });
+    clickTarget(api, { kind: 'creature', side: SIDE_AI, index: Number(cardEl.dataset.index) });
   });
 
   refs.aiHero.addEventListener('click', () => {
-    resolveTargetClick(api, { kind: 'hero', side: SIDE_AI });
+    clickTarget(api, { kind: 'hero', side: SIDE_AI });
   });
 
   refs.playerHero.addEventListener('click', () => {
     // Your own portrait only cancels a pending choice; it never hurts you.
-    clearSelection(api);
+    cancelPick(api);
   });
 
   refs.endTurnBtn.addEventListener('click', () => api.endPlayerTurn());
@@ -62,29 +62,29 @@ export function bindInput(api) {
     }
     if (api.state.phase !== 'player' || api.state.winner) return;
     if (ev.key === 'Escape') {
-      clearSelection(api);
+      cancelPick(api);
     } else if (ev.key === ' ' || ev.key === 'Enter') {
       ev.preventDefault();
       api.endPlayerTurn();
     } else if (/^[1-8]$/.test(ev.key)) {
-      selectHandCard(api, Number(ev.key) - 1);
+      pickHandCard(api, Number(ev.key) - 1);
     }
   });
 }
 
-function clearSelection(api) {
+function cancelPick(api) {
   api.ui.selectedHand = null;
   api.ui.selectedAttacker = null;
   api.ui.hint = '';
   api.render();
 }
 
-function selectHandCard(api, index) {
+function pickHandCard(api, index) {
   const { state, ui } = api;
   const card = state.player.hand[index];
   if (!card) return;
   if (ui.selectedHand === index) {
-    clearSelection(api);
+    cancelPick(api);
     return;
   }
   const reason = playBlockReason(state, SIDE_PLAYER, index);
@@ -111,12 +111,12 @@ function selectHandCard(api, index) {
   api.render();
 }
 
-function selectAttacker(api, index) {
+function pickAttacker(api, index) {
   const { state, ui } = api;
   const creature = state.player.board[index];
   if (!creature) return;
   if (ui.selectedAttacker === index) {
-    clearSelection(api);
+    cancelPick(api);
     return;
   }
   if (!creature.canAttack) {
@@ -131,7 +131,7 @@ function selectAttacker(api, index) {
   api.render();
 }
 
-function resolveTargetClick(api, target) {
+function clickTarget(api, target) {
   const { state, ui } = api;
   if (state.phase !== 'player' || state.winner) return;
   if (ui.selectedHand !== null) {

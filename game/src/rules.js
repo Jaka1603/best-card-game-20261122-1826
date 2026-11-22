@@ -1,22 +1,21 @@
-// rules.js — how the duel works, as pure functions over state.js.
-// All damage in the game flows through applyDamage and nowhere else, so a
-// creature's death, a hero's fall and the winner flag can never disagree
-// between two call sites.
+// rules.js — the duel's law, as functions over state.js.
+// Every point of damage in the game passes through applyDamage, so a
+// creature's death, a hero's fall and the winner flag are decided in
+// exactly one place and can never drift apart between call sites.
 import { TUNING } from './config.js';
 import { drawFrom } from './deck.js';
 import { SIDE_AI, SIDE_PLAYER, otherSide, pushLog } from './state.js';
 
-function sideName(side) {
-  return side === SIDE_PLAYER ? 'You' : 'Veyla';
-}
+const nameOf = (side) => (side === SIDE_PLAYER ? 'You' : 'Veyla');
+const castVerb = (side) => (side === SIDE_AI ? 'casts' : 'cast');
 
-/** Resonance: this card's element matches the previous card played this turn. */
+/** Resonance: the card's element matches the side's previous card this turn. */
 export function hasResonance(state, side, card) {
   const s = state[side];
   return s.lastElement !== null && s.lastElement === card.element;
 }
 
-/** Why the card at `handIndex` cannot be played now, or null when it can. */
+/** Why the card at `handIndex` may not be played right now, or null. */
 export function playBlockReason(state, side, handIndex) {
   const s = state[side];
   const card = s.hand[handIndex];
@@ -27,9 +26,9 @@ export function playBlockReason(state, side, handIndex) {
 }
 
 /**
- * Play a card from hand. Damage spells need `target`:
+ * Play a card from a hand. A damage spell needs `target`:
  * { kind: 'creature', side, index } or { kind: 'hero', side }.
- * Returns { ok, reason?, events } — events tell the renderer what to show.
+ * Returns { ok, reason?, events } for the renderer to narrate.
  */
 export function playCard(state, side, handIndex, target) {
   const blocked = playBlockReason(state, side, handIndex);
@@ -47,8 +46,7 @@ export function playCard(state, side, handIndex, target) {
   s.cardsPlayed += 1;
   state.stats.cardsPlayed += 1;
   const events = [{ type: 'play', side, card }];
-  const who = sideName(side);
-  const verb = side === SIDE_PLAYER ? 'play' : 'plays';
+  const who = nameOf(side);
 
   if (card.kind === 'creature') {
     if (resonance) {
@@ -60,7 +58,7 @@ export function playCard(state, side, handIndex, target) {
     card.canAttack = false; // a creature rests on the turn it arrives
     card.justPlayed = true;
     s.board.push(card);
-    pushLog(state, `${who} ${verb} ${card.name} (${card.attack}/${card.health})${resonance ? ' — RESONANCE! +1/+1' : ''}.`);
+    pushLog(state, `${who} ${side === SIDE_PLAYER ? 'play' : 'plays'} ${card.name} (${card.attack}/${card.health})${resonance ? ' — RESONANCE! +1/+1' : ''}.`);
     return { ok: true, events };
   }
 
@@ -68,26 +66,25 @@ export function playCard(state, side, handIndex, target) {
   if (card.effect === 'damage') {
     const amount = card.amount + (resonance ? TUNING.resonanceSpellBonus : 0);
     events.push(...applyDamage(state, side, target, amount, card.name));
-    pushLog(state, `${who} cast${side === SIDE_AI ? 's' : ''} ${card.name} for ${amount} damage${resonance ? ' — RESONANCE! +1' : ''}.`);
+    pushLog(state, `${who} ${castVerb(side)} ${card.name} for ${amount} damage${resonance ? ' — RESONANCE! +1' : ''}.`);
   } else if (card.effect === 'heal') {
     const amount = card.amount + (resonance ? TUNING.resonanceHealBonus : 0);
     const before = s.life;
     s.life = Math.min(s.maxLife, s.life + amount);
     events.push({ type: 'heal', side, amount: s.life - before });
-    pushLog(state, `${who} cast${side === SIDE_AI ? 's' : ''} ${card.name}, restoring ${s.life - before} life.`);
+    pushLog(state, `${who} ${castVerb(side)} ${card.name}, restoring ${s.life - before} life.`);
   } else if (card.effect === 'draw') {
     const amount = card.amount + (resonance ? TUNING.resonanceSpellBonus : 0);
     const drawn = drawFrom(s.deck, s.hand, amount, TUNING.maxHand);
     events.push({ type: 'draw', side, count: drawn.length });
-    pushLog(state, `${who} cast${side === SIDE_AI ? 's' : ''} ${card.name} and draw${side === SIDE_AI ? 's' : ''} ${drawn.length} card${drawn.length === 1 ? '' : 's'}.`);
+    pushLog(state, `${who} ${castVerb(side)} ${card.name} and draw${side === SIDE_AI ? 's' : ''} ${drawn.length} card${drawn.length === 1 ? '' : 's'}.`);
   }
   return { ok: true, events };
 }
 
 /**
- * THE damage function. Applies `amount` to a creature or a hero, removes
- * the dead, credits the source side's damage tally, and ends the duel when
- * a hero reaches zero. Returns renderer events.
+ * THE damage function. Hurts a creature or a hero, removes the dead,
+ * credits the source side's tally, and ends the duel at zero life.
  */
 export function applyDamage(state, fromSide, target, amount, sourceName) {
   const events = [];
@@ -118,7 +115,7 @@ export function applyDamage(state, fromSide, target, amount, sourceName) {
   return events;
 }
 
-/** Why the creature at `boardIndex` cannot attack now, or null when it can. */
+/** Why the creature at `boardIndex` may not attack right now, or null. */
 export function attackBlockReason(state, side, boardIndex) {
   const creature = state[side].board[boardIndex];
   if (!creature) return 'no such creature';
@@ -127,9 +124,9 @@ export function attackBlockReason(state, side, boardIndex) {
 }
 
 /**
- * One creature attacks. A surviving defender strikes back with its own
- * attack; a dead one does not. The defender is captured BEFORE damage is
- * applied, because applyDamage may splice it out of the board array.
+ * One creature attacks. A defender that survives strikes back; one that
+ * dies does not. The defender object is captured BEFORE damage lands,
+ * because applyDamage may splice it out of the board mid-resolution.
  */
 export function attackCreature(state, side, boardIndex, target) {
   const blocked = attackBlockReason(state, side, boardIndex);
@@ -153,10 +150,12 @@ export function attackCreature(state, side, boardIndex, target) {
   return { ok: true, events };
 }
 
-/** Open a side's turn: refill ember, wake its creatures, draw a card.
- * Ember grows once per ROUND, at the player's turn start, and Veyla's cap
- * is set to the same value — neither side ever holds a permanent ember
- * lead from moving second. An empty deck costs 1 life (fatigue). */
+/**
+ * Open a side's turn: refill ember, wake its creatures, draw a card.
+ * Ember grows once per ROUND, at the player's turn start, and Veyla's
+ * cap is matched to the player's — moving second never becomes a
+ * permanent ember lead. Drawing from an empty deck costs 1 life.
+ */
 export function startTurn(state, side) {
   const s = state[side];
   if (side === SIDE_PLAYER) {
@@ -181,7 +180,7 @@ export function startTurn(state, side) {
   }
 }
 
-/** Hand the turn to the other side and open theirs. */
+/** Pass the turn to the other side and open theirs. */
 export function endTurn(state) {
   if (state.winner) return;
   const next = otherSide(state.sideToMove);
@@ -193,7 +192,7 @@ export function endTurn(state) {
   pushLog(state, next === SIDE_PLAYER ? `Turn ${state.turn} — your move.` : 'Veyla takes her turn…');
 }
 
-/** The winner, if either hero has fallen (or the flag is already set). */
+/** The winner, once a hero has fallen (or the flag is already set). */
 export function checkWinner(state) {
   if (state.player.life <= 0) return SIDE_AI;
   if (state.ai.life <= 0) return SIDE_PLAYER;

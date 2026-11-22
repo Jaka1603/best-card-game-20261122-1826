@@ -1,26 +1,26 @@
-// random.js — one seeded generator for the whole duel. A seed replays the
-// exact same shuffle and the exact same game, which is what lets the
-// screenshot scenes in shots.js be staged deterministically.
+// random.js — the duel's only source of chance.
+// One seeded generator drives every shuffle, so a seed always replays
+// the same duel; that determinism is what lets shots.js stage a real
+// mid-game frame and lets the QA duels be repeated exactly.
 
+/** mulberry32: a small, fast, seedable PRNG. Returns values in [0, 1). */
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function next() {
-    a |= 0;
     a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-/** Fisher–Yates shuffle on a copy, driven by the duel's own generator. */
+/** A shuffled copy of `list`, Fisher–Yates, driven by the given rng. */
 export function shuffle(list, rng) {
-  const out = list.slice();
+  const out = [...list];
   for (let i = out.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rng() * (i + 1));
-    const tmp = out[i];
-    out[i] = out[j];
-    out[j] = tmp;
+    [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
 }

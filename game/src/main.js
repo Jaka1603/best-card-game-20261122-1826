@@ -1,6 +1,6 @@
-// main.js — wiring only: collect the DOM, own the selection state, run
-// the turn loop, stage screenshot scenes, and expose window.__game so
-// headless probes can play the real game the way a person would.
+// main.js — wiring only: gather the DOM, own the selection state, run
+// the turn loop, stage the screenshot scenes, and expose window.__game
+// so a headless probe can play the real game the way a person would.
 import { applyAction, planNextAction, runTurn } from './ai.js';
 import { sfx, toggleMute } from './audio.js';
 import { bindInput } from './input.js';
@@ -49,7 +49,7 @@ function render() {
   renderAll(state, ui, refs);
 }
 
-/** A point on the stage above a hero panel or a board slot, for floaters. */
+/** A point on the stage above a hero panel or board slot, for floaters. */
 function stagePoint(target) {
   const stageRect = refs.stage.getBoundingClientRect();
   if (target.kind === 'hero') {
