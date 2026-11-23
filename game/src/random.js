@@ -1,7 +1,8 @@
-// random.js — the duel's only source of chance.
-// One seeded generator drives every shuffle, so a seed always replays
-// the same duel; that determinism is what lets shots.js stage a real
-// mid-game frame and lets the QA duels be repeated exactly.
+// random.js — the duel's single source of chance.
+// One seeded generator drives every shuffle in the game, so a given
+// seed always replays the same duel; that determinism is what lets
+// shots.js stage a real mid-game frame and lets the QA duels be
+// repeated exactly, run after run.
 
 /** mulberry32: a small, fast, seedable PRNG. Returns values in [0, 1). */
 export function mulberry32(seed) {

@@ -3,11 +3,11 @@
 // single material: a parchment ground tinted by the element, the
 // painting laid full-bleed across the top and feathered into that
 // ground (never a pasted rectangle), the name burned into the fade on
-// a feathered scrim, and — over everything — a worn gilt frame and one
-// grain-and-sheen skin, so art, words and stats all sit under the same
-// light and the same wear. The table adds its own final grade over the
-// whole scene (see styles.css: #grade-light, #grade-grain, #embers),
-// so the cards rest IN the hall instead of floating on top of it.
+// a feathered scrim, and — over everything — a gilt metal frame and
+// one grain-and-sheen skin, so art, words and stats all sit under the
+// same light and the same wear. The table adds its own final grade
+// over the whole scene (see styles.css: #grade-light, #grade-grain,
+// #embers), so the cards rest IN the hall instead of floating on it.
 import { AI_NAME, CARD_DEFS, ELEMENTS, PLAYER_NAME, TUNING, cardArtPath } from './config.js';
 
 // Element glyphs as inline SVG paths: flame, wave, leaf, mountain —
